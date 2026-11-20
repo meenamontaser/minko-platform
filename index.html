@@ -1,0 +1,1583 @@
+﻿<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>minko - منصة التجارة المتعددة</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'%3E%3Crect width='128' height='128' rx='28' fill='%230f172a'/%3E%3Ccircle cx='64' cy='64' r='44' fill='%23f59e0b'/%3E%3Ctext x='64' y='78' text-anchor='middle' font-family='Cairo, Arial, sans-serif' font-size='44' font-weight='900' fill='%230f172a'%3Em%3C/text%3E%3C/svg%3E">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%230f172a'/%3E%3Ccircle cx='90' cy='90' r='62' fill='%23f59e0b'/%3E%3Ctext x='90' y='110' text-anchor='middle' font-family='Cairo, Arial, sans-serif' font-size='64' font-weight='900' fill='%230f172a'%3Em%3C/text%3E%3C/svg%3E">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="minko">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
+        body { font-family: 'Cairo', sans-serif; }
+        .qty-input::-webkit-inner-spin-button, .qty-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        .qty-input { -moz-appearance: textfield; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <!-- شريط التنقل العلوي (نظيف وخالٍ تماماً من أي صفحة طلبات عامة) -->
+    <header class="bg-slate-900 text-white shadow-md sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-y-2">
+            <div class="flex items-center space-x-3 space-x-reverse">
+                <span class="text-2xl font-black text-amber-400 tracking-wider">minko</span>
+                <span class="text-xs bg-slate-800 text-slate-300 px-2 py-1 rounded whitespace-nowrap">منصة متعددة التجار</span>
+            </div>
+            <nav class="order-last w-full justify-center md:order-none md:w-auto flex items-center gap-5 md:gap-6 text-sm font-semibold whitespace-nowrap">
+                <button onclick="switchView('storefront')" class="hover:text-amber-400 transition">الرئيسية</button>
+                <button onclick="switchView('merchants-hub')" class="hover:text-amber-400 transition">بوابة التجار</button>
+                <button onclick="switchView('admin-hub')" class="hover:text-amber-400 transition">لوحة الإدارة</button>
+            </nav>
+            <div class="flex items-center gap-3">
+                <button onclick="openCartModal()" class="relative bg-amber-500 hover:bg-amber-600 text-slate-950 px-3 md:px-4 py-2 rounded-lg font-bold flex items-center gap-2 transition text-sm">
+                    <i class="fa-solid fa-cart-shopping"></i> <span class="hidden sm:inline">السلة</span>
+                    <span id="cart-count" class="bg-slate-950 text-white text-xs px-2 py-0.5 rounded-full">0</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-6">
+
+        <!-- واجهة المتجر الرئيسية للعملاء -->
+        <section id="view-storefront" class="space-y-6">
+            <div class="bg-gradient-to-r from-amber-500 to-amber-600 rounded-2xl p-6 md:p-8 text-slate-950 shadow-lg flex flex-col md:flex-row justify-between items-center">
+                <div class="space-y-2 mb-4 md:mb-0">
+                    <h1 class="text-2xl md:text-4xl font-black">تسوق من أفضل التجار في مصر</h1>
+                    <p class="text-slate-900 font-medium text-sm md:text-base">اختر منتجاتك، وادفع بأمان عبر فوري، ويوصلك طلبك لحد باب البيت.</p>
+                </div>
+                <div class="bg-white/95 p-4 rounded-xl shadow-md w-full md:w-80">
+                    <label class="block text-xs font-bold text-slate-700 mb-1">اختر محافظتك (لحساب الشحن):</label>
+                    <select id="customer-governorate" onchange="updateCartTotals()" class="w-full border rounded-lg p-2 text-sm font-semibold">
+                        <option value="">-- اختر المحافظة --</option>
+                        <option value="القاهرة">القاهرة</option>
+                        <option value="الجيزة">الجيزة</option>
+                        <option value="الإسكندرية">الإسكندرية</option>
+                        <option value="سوهاج">سوهاج</option>
+                        <option value="أسيوط">أسيوط</option>
+                        <option value="قنا">قنا</option>
+                        <option value="أسوان">أسوان</option>
+                        <option value="الشرقية">الشرقية</option>
+                        <option value="الدقهلية">الدقهلية</option>
+                        <option value="الغربية">الغربية</option>
+                        <option value="المنوفية">المنوفية</option>
+                        <option value="القليوبية">القليوبية</option>
+                        <option value="المنيا">المنيا</option>
+                        <option value="بني سويف">بني سويف</option>
+                        <option value="الفيوم">الفيوم</option>
+                        <option value="البحر الأحمر">البحر الأحمر</option>
+                        <option value="مطروح">مطروح</option>
+                        <option value="الوادي الجديد">الوادي الجديد</option>
+                        <option value="شمال سيناء">شمال سيناء</option>
+                        <option value="جنوب سيناء">جنوب سيناء</option>
+                        <option value="بورسعيد">بورسعيد</option>
+                        <option value="السويس">السويس</option>
+                        <option value="الإسماعيلية">الإسماعيلية</option>
+                        <option value="دمياط">دمياط</option>
+                        <option value="كفر الشيخ">كفر الشيخ</option>
+                        <option value="بحيرة">البحيرة</option>
+                        <option value="الأقصر">الأقصر</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex flex-col md:flex-row justify-between gap-4 items-center">
+                <div id="category-filters" class="flex flex-wrap gap-2"></div>
+                <div class="w-full md:w-80">
+                    <input type="text" id="search-input" oninput="searchProducts()" placeholder="ابحث عن منتج..." class="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-amber-500">
+                </div>
+            </div>
+
+            <div id="products-grid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 xl:grid-cols-10 gap-2 md:gap-3"></div>
+        </section>
+
+        <!-- بوابة التجار (تحتوي على الطلبات الواردة وإدارة المخزون الخاصة بالتاجر فقط) -->
+        <section id="view-merchants-hub" class="hidden space-y-6">
+            <div id="merchant-login-container" class="max-w-md mx-auto bg-white p-8 rounded-2xl shadow-md border">
+                <h2 class="text-2xl font-black mb-6 text-center text-slate-900">تسجيل دخول التجار</h2>
+                <form onsubmit="handleMerchantLogin(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-bold mb-1">البريد الإلكتروني:</label>
+                        <input type="email" id="login-email" required class="w-full border rounded-lg p-3 text-sm" placeholder="example@minko.com">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold mb-1">كلمة المرور:</label>
+                        <input type="password" id="login-password" required class="w-full border rounded-lg p-3 text-sm" placeholder="••••••••">
+                    </div>
+                    <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white p-3 rounded-lg font-bold transition">دخول لوحة التحكم</button>
+                </form>
+                <div class="mt-6 text-center border-t pt-4">
+                    <p class="text-sm text-gray-600 mb-2">ليس لديك متجر بعد؟</p>
+                    <button onclick="openRegisterModal()" class="text-amber-600 font-bold hover:underline text-sm">سجل متجرك الجديد الآن</button>
+                </div>
+            </div>
+
+            <div id="merchant-dashboard-container" class="hidden space-y-6">
+                <div class="bg-white p-6 rounded-2xl shadow-md flex justify-between items-center flex-wrap gap-4 border">
+                    <div>
+                        <h2 id="merchant-welcome-title" class="text-2xl font-black text-slate-900"></h2>
+                        <p id="merchant-store-subtitle" class="text-sm text-gray-500"></p>
+                        <p id="merchant-funder-badge" class="text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 inline-block px-3 py-1 rounded-lg mt-2 hidden"></p>
+                    </div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <select id="merchant-self-funder-select" onchange="handleMerchantToggleFunding()" class="border border-amber-300 bg-amber-50 text-slate-900 px-3 py-2 rounded-lg font-bold text-xs">
+                            <option value="unfunded">الحالة: غير مموَّل</option>
+                            <option value="funded">الحالة: مموَّل</option>
+                        </select>
+                        <button onclick="handleMerchantLogout()" class="bg-red-50 text-red-600 px-4 py-2 rounded-lg font-bold text-sm border border-red-200 hover:bg-red-100">خروج</button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-white p-5 rounded-xl shadow border">
+                        <span class="text-xs font-bold text-gray-500">إجمالي المبيعات المكتملة</span>
+                        <h3 id="merchant-stat-sales" class="text-2xl font-black text-slate-900 mt-1">0 ج.م</h3>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl shadow border">
+                        <span class="text-xs font-bold text-gray-500">أرباح معلقة (بانتظار تسليم المندوب)</span>
+                        <h3 id="merchant-stat-escrow" class="text-2xl font-black text-amber-600 mt-1">0 ج.م</h3>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl shadow border">
+                        <span class="text-xs font-bold text-gray-500">رصيد متاح للسحب</span>
+                        <h3 id="merchant-stat-balance" class="text-2xl font-black text-emerald-600 mt-1">0 ج.م</h3>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl shadow-md border space-y-4">
+                    <h3 class="text-lg font-bold text-slate-900"><i class="fa-solid fa-box-archive text-amber-500 ml-1"></i> الطلبات الواردة لمتجرك ومتابعة المخزون وتسليم المندوب</h3>
+                    <div id="merchant-orders-list" class="space-y-3"></div>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl shadow-md border space-y-3">
+                    <h3 class="text-lg font-bold text-slate-900"><i class="fa-solid fa-truck-fast text-amber-500 ml-1"></i> تحديد تكلفة الشحن لكل محافظة</h3>
+                    <p class="text-xs text-gray-500 mb-3">اختار المحافظة من القايمة واكتب سعر شحنها واضغط <b>حفظ السعر</b>. السعر <b>0</b> يعني <b>شحن مجاني</b>، والمحافظة اللي ماحددتش لها سعر الشحن فيها بيتحسب 0 (مجاني). اختار <b>كل المحافظات</b> لو السعر واحد للكل.</p>
+                    <div id="merchant-shipping-inputs"></div>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl shadow-md border">
+                    <h3 class="text-lg font-bold mb-4 text-slate-900"><i class="fa-solid fa-plus-circle text-amber-500 ml-1"></i> إضافة منتج جديد</h3>
+                    <form id="add-product-form" onsubmit="handleAddProduct(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <input type="text" id="new-prod-name" placeholder="اسم المنتج" required class="border rounded-lg p-2.5 text-sm">
+                        <input type="number" id="new-prod-price" placeholder="السعر الأصلي (ج.م)" required class="border rounded-lg p-2.5 text-sm">
+                        <input type="number" id="new-prod-discount" placeholder="نسبة الخصم % (اختياري)" min="0" max="90" step="1" class="border rounded-lg p-2.5 text-sm">
+                        <input type="text" id="new-prod-category" placeholder="القسم" required class="border rounded-lg p-2.5 text-sm">
+                        <input type="number" id="new-prod-stock" placeholder="الكمية المتوفرة في المخزن" required class="border rounded-lg p-2.5 text-sm">
+                        <div class="md:col-span-2 space-y-2">
+                            <label class="block text-xs font-bold text-gray-600">صورة المنتج:</label>
+                            <div class="flex flex-wrap items-center gap-3">
+                                <input type="file" id="new-prod-imagefile" accept="image/*" class="flex-1 min-w-0 border rounded-lg p-2 text-sm bg-gray-50">
+                                <button type="button" onclick="document.getElementById('new-prod-camera').click()" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-2 rounded-lg text-sm font-bold whitespace-nowrap">📷 تصوير بالكاميرا</button>
+                                <input type="file" id="new-prod-camera" accept="image/*" capture="environment" class="hidden" onchange="useCameraPhoto('new-prod-camera','new-prod-imagefile','new-prod-img-status')">
+                            </div>
+                            <p id="new-prod-img-status" class="text-xs text-emerald-600"></p>
+                        </div>
+                        <textarea id="new-prod-desc" placeholder="وصف المنتج..." class="border rounded-lg p-2.5 text-sm md:col-span-3"></textarea>
+                        <button type="submit" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold p-2.5 rounded-lg md:col-span-3 transition">حفظ ونشر المنتج</button>
+                    </form>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl shadow-md border">
+                    <h3 class="text-lg font-bold mb-4 text-slate-900 border-b pb-2">إدارة مخزون منتجاتك</h3>
+                    <div id="merchant-products-list" class="overflow-x-auto"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- لوحة تحكم الإدارة العليا (Admin) -->
+        <section id="view-admin-hub" class="hidden space-y-6">
+            <div id="admin-login-box" class="max-w-md mx-auto bg-white p-8 rounded-2xl shadow-md border">
+                <h2 class="text-2xl font-black mb-6 text-center text-slate-900">دخول الإدارة العليا</h2>
+                <form onsubmit="handleAdminLogin(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-bold mb-1">كلمة مرور المدير:</label>
+                        <input type="password" id="admin-pass-input" required class="w-full border rounded-lg p-3 text-sm" placeholder="••••••••">
+                    </div>
+                    <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white p-3 rounded-lg font-bold transition">دخول لوحة الإدارة</button>
+                </form>
+            </div>
+
+            <div id="admin-dashboard-box" class="hidden space-y-6">
+                <div class="bg-slate-900 text-white p-6 rounded-2xl flex justify-between items-center flex-wrap gap-4">
+                    <div>
+                        <h2 class="text-2xl font-black">لوحة تحكم منصة minko</h2>
+                        <p class="text-sm text-slate-400">إدارة الأرباح والعمولات والمخزون</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="resetAllData()" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg font-bold text-sm"><i class="fa-solid fa-trash-can ml-1"></i> تصفير المنصة</button>
+                        <button onclick="logoutAdmin()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-bold text-sm">خروج</button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-2xl shadow-md border space-y-4">
+                        <h3 class="text-lg font-bold text-slate-900"><i class="fa-solid fa-percent text-amber-500 ml-1"></i> الإعدادات المالية (العمولة / مبلغ ثابت)</h3>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 mb-1">نوع الاستقطاع:</label>
+                                <select id="comm-type" onchange="toggleCommType()" class="w-full border rounded-lg p-2.5 text-sm font-bold">
+                                    <option value="percent">نسبة مئوية (%)</option>
+                                    <option value="fixed">مبلغ استقطاعي ثابت (ج.م لكل طلب)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label id="comm-label" class="block text-xs font-bold text-gray-700 mb-1">قيمة العمولة (%):</label>
+                                <input type="number" id="platform-commission-value" value="10" min="0" class="w-full border rounded-lg p-2.5 text-sm font-bold">
+                            </div>
+                            <button onclick="savePlatformFinancials()" class="w-full bg-slate-900 hover:bg-slate-800 text-white py-2.5 rounded-lg text-sm font-bold transition">حفظ الإعدادات المالية</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-2xl shadow-md border space-y-4">
+                        <h3 class="text-lg font-bold text-slate-900"><i class="fa-solid fa-key text-amber-500 ml-1"></i> تغيير كلمة مرور الأدمن</h3>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 mb-1">كلمة المرور الجديدة:</label>
+                                <input type="password" id="new-admin-pass" placeholder="اكتب كلمة المرور الجديدة" class="w-full border rounded-lg p-2.5 text-sm">
+                            </div>
+                            <button onclick="changeAdminPassword()" class="w-full bg-slate-900 hover:bg-slate-800 text-white py-2.5 rounded-lg text-sm font-bold transition mt-6">تحديث كلمة المرور</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-white p-5 rounded-xl shadow border">
+                        <span class="text-xs font-bold text-gray-500">إجمالي التجار</span>
+                        <h3 id="admin-total-merchants" class="text-2xl font-black text-slate-900 mt-1">0</h3>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl shadow border">
+                        <span class="text-xs font-bold text-gray-500">أرباح عمولات المنصة</span>
+                        <h3 id="admin-total-commission" class="text-2xl font-black text-amber-600 mt-1">0 ج.م</h3>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl shadow border">
+                        <span class="text-xs font-bold text-gray-500">الأموال المحجوزة الحالية (Escrow)</span>
+                        <h3 id="admin-total-escrow" class="text-2xl font-black text-indigo-600 mt-1">0 ج.م</h3>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl shadow-md border space-y-4">
+                    <h3 class="text-lg font-bold">إدارة التجار والمتاجر (تعديل أو حذف)</h3>
+                    <div id="admin-merchants-table" class="overflow-x-auto"></div>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl shadow-md border space-y-4">
+                    <h3 class="text-lg font-bold text-slate-900"><i class="fa-solid fa-hand-holding-dollar text-amber-500 ml-1"></i> نظام الممولين وتمويل التجار</h3>
+                    <form onsubmit="handleAddFunder(event)" class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                        <input type="text" id="funder-name" placeholder="اسم الممول / الجهة الممولة" required class="border rounded-lg p-2.5 text-sm">
+                        <select id="funder-merchant-select" required class="border rounded-lg p-2.5 text-sm bg-white"></select>
+                        <input type="number" id="funder-amount" placeholder="مبلغ التمويل (ج.م)" min="1" required class="border rounded-lg p-2.5 text-sm">
+                        <input type="number" id="funder-share" placeholder="نسبة ربح الممول (%)" min="0" max="100" step="0.5" required class="border rounded-lg p-2.5 text-sm">
+                        <button type="submit" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold p-2.5 rounded-lg md:col-span-4 transition">تسجيل التمويل للتاجر</button>
+                    </form>
+                    <div id="admin-funders-table" class="overflow-x-auto"></div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- نافذة السلة وإتمام الطلب -->
+    <div id="cart-modal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-lg rounded-2xl p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="text-xl font-bold">سلة المشتريات وعنوان التوصيل المفصل</h3>
+                <button onclick="closeCartModal()" class="text-gray-500 hover:text-red-500 font-bold text-lg"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <div class="bg-gray-50 p-4 rounded-xl border space-y-3">
+                <h4 class="font-bold text-sm text-slate-900"><i class="fa-solid fa-address-book text-amber-500 ml-1"></i> بيانات الشحن وعنوان العميل</h4>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">اسم العميل:</label>
+                        <input type="text" id="cust-name" placeholder="الاسم ثلاثي" class="w-full border rounded-lg p-2 text-sm bg-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">رقم الموبايل (واتساب):</label>
+                        <input type="text" id="cust-phone" placeholder="01xxxxxxxxx" class="w-full border rounded-lg p-2 text-sm bg-white">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">المحافظة (لحساب الشحن):</label>
+                        <select id="cart-governorate-select" onchange="syncGovernorateFromCart()" class="w-full border rounded-lg p-2 text-sm font-semibold bg-white">
+                            <option value="">-- اختر المحافظة --</option>
+                            <option value="القاهرة">القاهرة</option>
+                            <option value="الجيزة">الجيزة</option>
+                            <option value="الإسكندرية">الإسكندرية</option>
+                            <option value="سوهاج">سوهاج</option>
+                            <option value="أسيوط">أسيوط</option>
+                            <option value="قنا">قنا</option>
+                            <option value="أسوان">أسوان</option>
+                            <option value="الشرقية">الشرقية</option>
+                            <option value="الدقهلية">الدقهلية</option>
+                            <option value="الغربية">الغربية</option>
+                            <option value="المنوفية">المنوفية</option>
+                            <option value="القليوبية">القليوبية</option>
+                            <option value="المنيا">المنيا</option>
+                            <option value="بني سويف">بني سويف</option>
+                            <option value="الفيوم">الفيوم</option>
+                            <option value="البحر الأحمر">البحر الأحمر</option>
+                            <option value="مطروح">مطروح</option>
+                            <option value="الوادي الجديد">الوادي الجديد</option>
+                            <option value="شمال سيناء">شمال سيناء</option>
+                            <option value="جنوب سيناء">جنوب سيناء</option>
+                            <option value="بورسعيد">بورسعيد</option>
+                            <option value="السويس">السويس</option>
+                            <option value="الإسماعيلية">الإسماعيلية</option>
+                            <option value="دمياط">دمياط</option>
+                            <option value="كفر الشيخ">كفر الشيخ</option>
+                            <option value="بحيرة">البحيرة</option>
+                            <option value="الأقصر">الأقصر</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">المدينة / المركز:</label>
+                        <input type="text" id="cust-city" placeholder="مثال: سوهاج..." class="w-full border rounded-lg p-2 text-sm bg-white">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">المنطقة / الحي:</label>
+                        <input type="text" id="cust-area" placeholder="مثال: الجمهورية..." class="w-full border rounded-lg p-2 text-sm bg-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">اسم الشارع:</label>
+                        <input type="text" id="cust-street" placeholder="اسم الشارع..." class="w-full border rounded-lg p-2 text-sm bg-white">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">العنوان التفصيلي (رقم الحلة / الدور):</label>
+                    <input type="text" id="cust-address-detail" placeholder="عمارة رقم..." class="w-full border rounded-lg p-2 text-sm bg-white">
+                </div>
+            </div>
+
+            <div id="cart-items-container" class="space-y-3"></div>
+            
+            <div class="border-t pt-3 space-y-2 text-sm">
+                <div class="flex justify-between"><span>إجمالي المنتجات:</span> <span id="cart-subtotal" class="font-bold">0 ج.م</span></div>
+                <div class="flex justify-between"><span>تكلفة الشحن:</span> <span id="cart-shipping" class="font-bold text-slate-700">اختر المحافظة</span></div>
+                <div class="flex justify-between text-base font-black border-t pt-2"><span>الإجمالي النهائي:</span> <span id="cart-total" class="text-amber-600">0 ج.م</span></div>
+            </div>
+            <button onclick="checkoutFawry()" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black p-3 rounded-xl transition">إتمام الطلب والدفع عبر فوري (Fawry Pay)</button>
+        </div>
+    </div>
+
+    <!-- نافذة تأكيد الطلب وإرسال رسالة الواتساب للعميل -->
+    <div id="whatsapp-modal" class="fixed inset-0 bg-black/60 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-2xl p-6 space-y-4 text-center">
+            <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto text-2xl">
+                <i class="fa-brands fa-whatsapp"></i>
+            </div>
+            <h3 class="text-xl font-black text-slate-900">تم تسجيل طلبك بنجاح!</h3>
+            <p class="text-xs text-gray-500">يمكنك الآن إرسال تفاصيل الفاتورة والمشتريات وميعاد التسليم إلى واتساب العميل مباشرة:</p>
+            
+            <div id="wa-preview-box" class="bg-gray-50 p-3 rounded-xl text-right text-xs font-mono border space-y-1"></div>
+
+            <a id="wa-send-btn" href="#" target="_blank" class="block w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold p-3 rounded-xl transition">
+                <i class="fa-brands fa-whatsapp ml-1"></i> إرسال تفاصيل الطلب عبر واتساب للعميل
+            </a>
+            <button onclick="closeWhatsAppModal()" class="w-full bg-gray-200 hover:bg-gray-300 text-slate-800 font-bold p-2.5 rounded-xl text-sm transition">إغلاق وتخطي</button>
+        </div>
+    </div>
+
+    <!-- نافذة تسجيل تاجر -->
+    <div id="register-modal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-2xl p-6 space-y-4">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 id="merchant-modal-title" class="text-xl font-bold">تسجيل متجر جديد</h3>
+                <button onclick="closeRegisterModal()" class="text-gray-500 hover:text-red-500"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form onsubmit="handleSaveMerchant(event)" class="space-y-3">
+                <input type="hidden" id="edit-merchant-id">
+                <div><label class="block text-xs font-bold mb-1">اسم المتجر:</label><input type="text" id="reg-store-name" required class="w-full border rounded-lg p-2 text-sm"></div>
+                <div><label class="block text-xs font-bold mb-1">اسم التاجر:</label><input type="text" id="reg-owner-name" required class="w-full border rounded-lg p-2 text-sm"></div>
+                <div><label class="block text-xs font-bold mb-1">البريد الإلكتروني:</label><input type="email" id="reg-email" required class="w-full border rounded-lg p-2 text-sm"></div>
+                <div><label class="block text-xs font-bold mb-1">كلمة المرور:</label><input type="text" id="reg-password" required class="w-full border rounded-lg p-2 text-sm"></div>
+                <div>
+                    <label class="block text-xs font-bold mb-1">حالة التمويل للتاجر:</label>
+                    <select id="reg-funded-status" onchange="toggleRegFunderFields()" class="w-full border rounded-lg p-2 text-sm bg-white font-semibold">
+                        <option value="unfunded">تاجر غير مموَّل</option>
+                        <option value="funded">تاجر مموَّل</option>
+                    </select>
+                </div>
+                <div id="reg-funder-extra" class="hidden space-y-2 bg-amber-50 p-3 rounded-lg border border-amber-200">
+                    <div><label class="block text-xs font-bold mb-1">اسم الممول / الجهة الممولة:</label><input type="text" id="reg-funder-name" placeholder="اسم الممول" class="w-full border rounded-lg p-2 text-sm bg-white"></div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div><label class="block text-xs font-bold mb-1">مبلغ التمويل (ج.م):</label><input type="number" id="reg-funder-amount" min="1" placeholder="0" class="w-full border rounded-lg p-2 text-sm bg-white"></div>
+                        <div><label class="block text-xs font-bold mb-1">نسبة ربح الممول (%):</label><input type="number" id="reg-funder-share" min="0" max="100" step="0.5" placeholder="0" class="w-full border rounded-lg p-2 text-sm bg-white"></div>
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-slate-900 text-white p-3 rounded-lg font-bold">حفظ البيانات</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- نافذة تعديل تاجر من الأدمن -->
+    <div id="edit-merchant-modal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-2xl p-6 space-y-4">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="text-xl font-bold">تعديل بيانات التاجر</h3>
+                <button onclick="closeEditMerchantModal()" class="text-gray-500 hover:text-red-500"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form onsubmit="handleUpdateMerchantAdmin(event)" class="space-y-3">
+                <input type="hidden" id="admin-edit-m-id">
+                <div><label class="block text-xs font-bold mb-1">اسم المتجر:</label><input type="text" id="admin-edit-store" required class="w-full border rounded-lg p-2 text-sm"></div>
+                <div><label class="block text-xs font-bold mb-1">اسم المالك:</label><input type="text" id="admin-edit-owner" required class="w-full border rounded-lg p-2 text-sm"></div>
+                <div><label class="block text-xs font-bold mb-1">البريد الإلكتروني:</label><input type="email" id="admin-edit-email" required class="w-full border rounded-lg p-2 text-sm"></div>
+                <button type="submit" class="w-full bg-amber-500 text-slate-950 p-3 rounded-lg font-bold">حفظ التعديلات</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- نافذة تعديل منتج -->
+    <div id="edit-product-modal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-2xl p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="text-xl font-bold">تعديل المنتج ومخزونه</h3>
+                <button onclick="closeEditProductModal()" class="text-gray-500 hover:text-red-500"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form onsubmit="handleUpdateProduct(event)" class="space-y-3">
+                <input type="hidden" id="edit-prod-id">
+                <div><label class="block text-xs font-bold mb-1">اسم المنتج:</label><input type="text" id="edit-prod-name" required class="w-full border rounded-lg p-2 text-sm"></div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div><label class="block text-xs font-bold mb-1">السعر:</label><input type="number" id="edit-prod-price" required class="w-full border rounded-lg p-2 text-sm"></div>
+                    <div><label class="block text-xs font-bold mb-1">نسبة الخصم %:</label><input type="number" id="edit-prod-discount" min="0" max="90" step="1" class="w-full border rounded-lg p-2 text-sm"></div>
+                    <div><label class="block text-xs font-bold mb-1">الكمية بالمخزن:</label><input type="number" id="edit-prod-stock" required class="w-full border rounded-lg p-2 text-sm"></div>
+                </div>
+                <div><label class="block text-xs font-bold mb-1">القسم:</label><input type="text" id="edit-prod-category" required class="w-full border rounded-lg p-2 text-sm"></div>
+                <div><label class="block text-xs font-bold mb-1">صورة جديدة:</label><input type="file" id="edit-prod-imagefile" accept="image/*" class="w-full border rounded-lg p-2 text-sm bg-gray-50"></div>
+                <div><label class="block text-xs font-bold mb-1">الوصف:</label><textarea id="edit-prod-desc" class="w-full border rounded-lg p-2 text-sm"></textarea></div>
+                <button type="submit" class="w-full bg-amber-500 text-slate-950 p-3 rounded-lg font-bold">حفظ</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const allEgyptGovernorates = [
+            "القاهرة", "الجيزة", "الإسكندرية", "سوهاج", "أسيوط", "قنا", "أسوان", 
+            "الشرقية", "الدقهلية", "الغربية", "المنوفية", "القليوبية", "المنيا", 
+            "بني سويف", "الفيوم", "البحر الأحمر", "مطروح", "الوادي الجديد", 
+            "شمال سيناء", "جنوب سيناء", "بورسعيد", "السويس", "الإسماعيلية", 
+            "دمياط", "كفر الشيخ", "بحيرة", "الأقصر"
+        ];
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCOnWYSPxmSz8gm0Vjt5kvgHhJpgEmaS88",
+            authDomain: "minko-store.firebaseapp.com",
+            projectId: "minko-store",
+            storageBucket: "minko-store.firebasestorage.app",
+            messagingSenderId: "413150596248",
+            appId: "1:413150596248:web:22dedfb5b6843666fb14ed"
+        };
+
+        let firebaseDb = null;
+        let firebaseCloudEnabled = false;
+        try {
+            if (typeof firebase !== 'undefined' && firebaseConfig.apiKey !== "YOUR_FIREBASE_API_KEY") {
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(firebaseConfig);
+                }
+                firebaseDb = firebase.firestore();
+                firebaseDb.settings({ experimentalForceLongPolling: true, useFetchStreams: false });
+                firebaseCloudEnabled = true;
+            }
+        } catch (fbErr) {
+            console.warn("Firebase init notice:", fbErr);
+        }
+
+        const defaultDbTemplate = {
+            merchants: [],
+            products: [],
+            orders: [],
+            fundings: [],
+            settings: { 
+                adminPassword: 'admin123',
+                commType: 'percent', 
+                commValue: 10 
+            }
+        };
+
+        let dbData = JSON.parse(localStorage.getItem('minko_clean_db')) || structuredClone(defaultDbTemplate);
+        if (!Array.isArray(dbData.fundings)) {
+            dbData.fundings = [];
+        }
+
+        function setFbStatus(ok, msg) {
+            const el = document.getElementById('fb-status');
+            if (!el) return;
+            el.style.background = ok ? '#065f46' : '#991b1b';
+            el.textContent = (ok ? '✅ ' : '❌ ') + msg;
+            el.style.display = (location.search.indexOf('test') !== -1) ? 'block' : 'none';
+        }
+
+        function saveDB() {
+            localStorage.setItem('minko_clean_db', JSON.stringify(dbData));
+            if (firebaseCloudEnabled && firebaseDb) {
+                firebaseDb.collection('minko_platform').doc('main_db').set(dbData, { merge: true }).then(() => {
+                    setFbStatus(true, 'تم الحفظ في Firebase');
+                }).catch((err) => {
+                    console.warn("Firestore save notice:", err);
+                    setFbStatus(false, 'فشل الحفظ: ' + (err.code || err.message));
+                });
+            }
+        }
+
+        function syncFromFirebaseOnce() {
+            if (!firebaseCloudEnabled || !firebaseDb) {
+                setFbStatus(false, 'Firebase غير متصل (إعدادات ناقصة)');
+                return;
+            }
+            firebaseDb.collection('minko_platform').doc('main_db').get().then((doc) => {
+                setFbStatus(true, doc.exists ? 'متصل بـ Firebase (فيه بيانات)' : 'متصل بـ Firebase (لسه فاضي)');
+                if (doc.exists) {
+                    const cloudData = doc.data();
+                    if (cloudData) {
+                        dbData = {
+                            merchants: Array.isArray(cloudData.merchants) ? cloudData.merchants : [],
+                            products: Array.isArray(cloudData.products) ? cloudData.products : [],
+                            orders: Array.isArray(cloudData.orders) ? cloudData.orders : [],
+                            fundings: Array.isArray(cloudData.fundings) ? cloudData.fundings : [],
+                            settings: cloudData.settings || structuredClone(defaultDbTemplate.settings)
+                        };
+                        localStorage.setItem('minko_clean_db', JSON.stringify(dbData));
+                        renderStorefront();
+                        if (currentMerchant) {
+                            const updatedM = dbData.merchants.find((m) => m.id === currentMerchant.id);
+                            if (updatedM) {
+                                currentMerchant = updatedM;
+                                showMerchantDashboard();
+                            }
+                        }
+                        if (!document.getElementById('admin-dashboard-box').classList.contains('hidden')) {
+                            renderAdminDashboard();
+                        }
+                    }
+                }
+            }).catch((err) => {
+                console.warn("Firestore load notice:", err);
+                setFbStatus(false, 'فشل الاتصال: ' + (err.code || err.message));
+            });
+        }
+
+        function resetAllData() {
+            if(prompt('تحذير: هيتمسح كل التجار والمنتجات والطلبات من المنصة ومن Firebase ولا يمكن التراجع.\nلو متأكد اكتب كلمة: تصفير') === 'تصفير') {
+                dbData = structuredClone(defaultDbTemplate);
+                saveDB();
+                currentMerchant = null;
+                cart = [];
+                document.getElementById('cart-count').innerText = 0;
+                renderAdminDashboard();
+                renderStorefront();
+                alert('تم التصفير بنجاح.');
+            }
+        }
+
+        let currentMerchant = null;
+        let cart = [];
+
+        function switchView(viewName) {
+            document.getElementById('view-storefront').classList.add('hidden');
+            document.getElementById('view-merchants-hub').classList.add('hidden');
+            document.getElementById('view-admin-hub').classList.add('hidden');
+
+            if(viewName === 'storefront') {
+                document.getElementById('view-storefront').classList.remove('hidden');
+                renderStorefront();
+            } else if(viewName === 'merchants-hub') {
+                document.getElementById('view-merchants-hub').classList.remove('hidden');
+                if(currentMerchant) {
+                    showMerchantDashboard();
+                } else {
+                    document.getElementById('merchant-login-container').classList.remove('hidden');
+                    document.getElementById('merchant-dashboard-container').classList.add('hidden');
+                }
+            } else if(viewName === 'admin-hub') {
+                document.getElementById('view-admin-hub').classList.remove('hidden');
+                document.getElementById('comm-type').value = dbData.settings.commType || 'percent';
+                document.getElementById('platform-commission-value').value = dbData.settings.commValue || 10;
+                toggleCommType();
+                renderAdminDashboard();
+            }
+        }
+
+        function toggleCommType() {
+            const type = document.getElementById('comm-type').value;
+            const label = document.getElementById('comm-label');
+            if(type === 'percent') {
+                label.innerText = 'قيمة العمولة النسبية (%):';
+            } else {
+                label.innerText = 'المبلغ الاستقطاعي الثابت لكل طلب (ج.م):';
+            }
+        }
+
+        function savePlatformFinancials() {
+            const type = document.getElementById('comm-type').value;
+            const val = parseFloat(document.getElementById('platform-commission-value').value);
+            if(isNaN(val) || val < 0) { alert('قيمة غير صحيحة'); return; }
+            dbData.settings.commType = type;
+            dbData.settings.commValue = val;
+            saveDB();
+            alert('تم حفظ الإعدادات المالية للمنصة بنجاح!');
+        }
+
+        function changeAdminPassword() {
+            const newPass = document.getElementById('new-admin-pass').value;
+            if(!newPass) { alert('يرجى كتابة كلمة المرور الجديدة'); return; }
+            dbData.settings.adminPassword = newPass;
+            saveDB();
+            document.getElementById('new-admin-pass').value = '';
+            alert('تم تحديث كلمة مرور الأدمن بنجاح!');
+        }
+
+        function renderStorefront(filterCat = 'all', searchKey = '') {
+            const grid = document.getElementById('products-grid');
+            grid.innerHTML = '';
+
+            const cats = ['all', ...new Set(dbData.products.filter(p => { const m = dbData.merchants.find(x => x.id === p.merchantId); return m && m.status === 'active'; }).map(p => p.category))];
+            document.getElementById('category-filters').innerHTML = cats.map(c => 
+                `<button onclick="filterCategory('${c}')" class="px-4 py-2 ${filterCat === c ? 'bg-amber-500 text-slate-950 font-black' : 'bg-slate-900 text-white'} rounded-lg text-sm shadow transition">${c === 'all' ? 'الكل' : c}</button>`
+            ).join('');
+
+            const filtered = dbData.products.filter(p => {
+                const matchCat = filterCat === 'all' || p.category === filterCat;
+                const matchSearch = p.name.toLowerCase().includes(searchKey.toLowerCase()) || (p.desc && p.desc.toLowerCase().includes(searchKey.toLowerCase()));
+                const merchant = dbData.merchants.find(m => m.id === p.merchantId);
+                return matchCat && matchSearch && merchant && merchant.status === 'active';
+            });
+
+            if(filtered.length === 0) {
+                grid.innerHTML = `<div class="col-span-full text-center py-16 bg-white rounded-2xl border border-dashed"><p class="text-gray-500 font-bold">لا توجد منتجات معروضة حالياً.</p></div>`;
+                return;
+            }
+
+            filtered.forEach(p => {
+                const merchant = dbData.merchants.find(m => m.id === p.merchantId);
+                const imgUrl = p.image || 'https://placehold.co/400x300/f1f5f9/64748b?text=minko';
+                const stockBadge = p.stock > 0 ? `<span class="text-[10px] text-emerald-600 font-bold">متاح: ${p.stock}</span>` : `<span class="text-[10px] text-red-500 font-bold">نفذت الكمية</span>`;
+
+                grid.innerHTML += `
+                    <div class="bg-white rounded-xl shadow-sm border overflow-hidden flex flex-col justify-between hover:shadow-md transition">
+                        <div>
+                            <img src="${imgUrl}" alt="${p.name}" class="w-full h-20 sm:h-24 md:h-28 object-cover">
+                            <div class="p-2 space-y-1">
+                                <span class="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-bold">${p.category}</span>
+                                <h3 class="font-bold text-xs md:text-sm text-slate-900 line-clamp-2">${p.name}</h3>
+                                <p class="hidden text-xs text-gray-500 line-clamp-2">${p.desc || ''}</p>
+                                <p class="hidden md:block text-[10px] text-gray-600 font-semibold truncate">المتجر: <span class="text-slate-900 font-bold">${merchant ? merchant.storeName : ''}</span></p>
+                                <div class="hidden md:block">${stockBadge}</div>
+                            </div>
+                        </div>
+                        <div class="p-2 pt-1 border-t mt-1 space-y-1">
+                            <div class="space-y-1">
+                                <div>${p.discount ? `<span class="inline-block bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">خصم ${p.discount}%</span> <span class="text-xs text-gray-400 line-through">${fmtMoney(p.originalPrice)} ج.م</span>` : ''}<span class="block text-sm md:text-base font-black text-amber-600">${fmtMoney(p.price)} ج.م</span></div>
+                                <div class="hidden lg:flex items-center justify-center gap-1">
+                                    <span class="hidden text-xs text-gray-500 font-bold">الكمية:</span>
+                                    <div class="flex items-center gap-1">
+                                        <button type="button" onclick="changeCardQty('${p.id}', 1)" class="w-6 h-6 bg-gray-200 hover:bg-gray-300 rounded font-black text-sm leading-none">+</button>
+                                        <input type="number" id="qty-${p.id}" value="1" min="1" max="${p.stock}" class="qty-input w-9 border rounded text-center p-0.5 text-xs font-bold bg-gray-50">
+                                        <button type="button" onclick="changeCardQty('${p.id}', -1)" class="w-6 h-6 bg-gray-200 hover:bg-gray-300 rounded font-black text-sm leading-none">-</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <button onclick="addToCartWithQty('${p.id}')" ${p.stock <= 0 ? 'disabled' : ''} class="w-full ${p.stock <= 0 ? 'bg-gray-300 cursor-not-allowed' : 'bg-slate-900 hover:bg-slate-800'} text-white py-1.5 rounded-lg text-[11px] md:text-xs font-bold transition flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-cart-plus"></i> ${p.stock <= 0 ? 'نفذت الكمية' : 'أضف للسلة'}
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function filterCategory(cat) { renderStorefront(cat, document.getElementById('search-input').value); }
+        function searchProducts() { renderStorefront('all', document.getElementById('search-input').value); }
+
+        function fmtMoney(n) {
+            n = Number(n) || 0;
+            return Number.isInteger(n) ? String(n) : n.toFixed(2);
+        }
+
+        function applyDiscount(origRaw, pctRaw) {
+            const o = parseFloat(origRaw) || 0;
+            const d = Math.min(90, Math.max(0, parseFloat(pctRaw) || 0));
+            return { price: d ? Math.round(o * (100 - d)) / 100 : o, originalPrice: o, discount: d };
+        }
+
+        function useCameraPhoto(camId, targetId, statusId) {
+            const cam = document.getElementById(camId), target = document.getElementById(targetId);
+            if (!cam.files || !cam.files[0]) return;
+            try {
+                const dt = new DataTransfer();
+                dt.items.add(cam.files[0]);
+                target.files = dt.files;
+                document.getElementById(statusId).textContent = '✅ تم التقاط الصورة: ' + cam.files[0].name;
+            } catch (e) { alert('المتصفح ده مش بيدعم التقاط الصورة هنا. اختار صورة من المعرض.'); }
+        }
+
+        function changeCardQty(productId, delta) {
+            const input = document.getElementById(`qty-${productId}`);
+            const prod = dbData.products.find(p => p.id === productId);
+            if (!input || !prod) return;
+            let v = (parseInt(input.value) || 1) + delta;
+            if (v < 1) v = 1;
+            if (v > prod.stock) v = prod.stock;
+            input.value = v;
+        }
+
+        function addToCartWithQty(productId) {
+            const qtyInput = document.getElementById(`qty-${productId}`);
+            const requestedQty = parseInt(qtyInput.value) || 1;
+            const prod = dbData.products.find(p => p.id === productId);
+            
+            if(requestedQty > prod.stock) { alert(`المتجر لا يملك سوى (${prod.stock}) قطع فقط في المخزن.`); return; }
+
+            const exist = cart.find(item => item.id === productId);
+            const currentInCart = exist ? exist.qty : 0;
+
+            if((currentInCart + requestedQty) > prod.stock) {
+                alert(`عذراً، الكمية الإضافية تتجاوز المتبقي في المخزون.`);
+                return;
+            }
+
+            if(exist) { exist.qty += requestedQty; } else { cart.push({...prod, qty: requestedQty}); }
+            document.getElementById('cart-count').innerText = cart.reduce((sum, i) => sum + i.qty, 0);
+            alert('تمت الإضافة للسلة!');
+        }
+
+        function openCartModal() {
+            const mainGov = document.getElementById('customer-governorate').value;
+            document.getElementById('cart-governorate-select').value = mainGov;
+
+            const container = document.getElementById('cart-items-container');
+            if(cart.length === 0) {
+                container.innerHTML = `<p class="text-center text-gray-500 py-6">السلة فارغة.</p>`;
+            } else {
+                container.innerHTML = cart.map((item, index) => {
+                    const merchant = dbData.merchants.find(m => m.id === item.merchantId);
+                    return `
+                    <div class="flex justify-between items-center border-b pb-3 gap-2">
+                        <div class="flex-1">
+                            <h4 class="font-bold text-sm">${item.name}</h4>
+                            <span class="text-xs text-gray-500 block">متجر: ${merchant ? merchant.storeName : ''}</span>
+                            <span class="text-xs text-amber-600 font-bold">${item.price} ج.م</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="changeCartQty(${index}, -1)" class="bg-gray-200 px-2 py-1 rounded font-bold text-xs">-</button>
+                            <span class="text-sm font-bold w-6 text-center">${item.qty}</span>
+                            <button onclick="changeCartQty(${index}, 1)" class="bg-gray-200 px-2 py-1 rounded font-bold text-xs">+</button>
+                        </div>
+                        <span class="font-bold text-slate-900 text-sm w-16 text-left">${item.price * item.qty} ج.م</span>
+                        <button onclick="removeFromCart(${index})" class="text-red-500 text-xs hover:underline ml-1">حذف</button>
+                    </div>
+                `}).join('');
+            }
+            updateCartTotals();
+            document.getElementById('cart-modal').classList.remove('hidden');
+        }
+
+        function syncGovernorateFromCart() {
+            const cartGov = document.getElementById('cart-governorate-select').value;
+            document.getElementById('customer-governorate').value = cartGov;
+            updateCartTotals();
+        }
+
+        function changeCartQty(index, delta) {
+            const item = cart[index];
+            const prod = dbData.products.find(p => p.id === item.id);
+            
+            if(delta > 0 && (item.qty + 1) > prod.stock) {
+                alert('لا يمكن تجاوز الكمية المتاحة في المخزن.');
+                return;
+            }
+
+            item.qty += delta;
+            if(item.qty <= 0) { cart.splice(index, 1); }
+            document.getElementById('cart-count').innerText = cart.reduce((sum, i) => sum + i.qty, 0);
+            openCartModal();
+        }
+
+        function removeFromCart(index) {
+            cart.splice(index, 1);
+            document.getElementById('cart-count').innerText = cart.reduce((sum, i) => sum + i.qty, 0);
+            openCartModal();
+        }
+
+        function closeCartModal() { document.getElementById('cart-modal').classList.add('hidden'); }
+        function closeWhatsAppModal() { document.getElementById('whatsapp-modal').classList.add('hidden'); switchView('storefront'); }
+
+        function updateCartTotals() {
+            const subtotal = cart.reduce((sum, i) => sum + (i.price * i.qty), 0);
+            document.getElementById('cart-subtotal').innerText = subtotal + ' ج.م';
+
+            const gov = document.getElementById('customer-governorate').value;
+            const shippingEl = document.getElementById('cart-shipping');
+            const totalEl = document.getElementById('cart-total');
+
+            if(cart.length === 0) { shippingEl.innerText = '0 ج.م'; totalEl.innerText = '0 ج.م'; return; }
+            if(!gov) { shippingEl.innerText = 'اختر المحافظة'; totalEl.innerText = subtotal + ' ج.م'; return; }
+
+            const uniqueMerchantIds = [...new Set(cart.map(item => item.merchantId))];
+            let totalShipping = 0;
+
+            uniqueMerchantIds.forEach(mId => {
+                const merchant = dbData.merchants.find(m => m.id === mId);
+                if(merchant && merchant.shippingRates && merchant.shippingRates[gov]) {
+                    totalShipping += parseFloat(merchant.shippingRates[gov]) || 0;
+                }
+            });
+
+            shippingEl.innerText = totalShipping + ' ج.م';
+            totalEl.innerText = (subtotal + totalShipping) + ' ج.م';
+        }
+
+        function checkoutFawry() {
+            if(cart.length === 0) { alert('السلة فارغة!'); return; }
+            const name = document.getElementById('cust-name').value;
+            const phone = document.getElementById('cust-phone').value;
+            const gov = document.getElementById('cart-governorate-select').value;
+            const city = document.getElementById('cust-city').value;
+            const area = document.getElementById('cust-area').value;
+            const street = document.getElementById('cust-street').value;
+            const detail = document.getElementById('cust-address-detail').value;
+
+            if(!name || !phone || !gov || !city || !area || !street || !detail) {
+                alert('يرجى استكمال جميع بيانات العنوان بالتفصيل ورقم الموبايل.');
+                return;
+            }
+
+            for(let item of cart) {
+                const prod = dbData.products.find(p => p.id === item.id);
+                if(!prod || prod.stock < item.qty) {
+                    alert(`عذراً، المنتج (${item.name}) نفد أو الكمية غير متوفرة.`);
+                    return;
+                }
+            }
+
+            const refNumber = Math.floor(100000000 + Math.random() * 900000000);
+            
+            cart.forEach(item => {
+                const prod = dbData.products.find(p => p.id === item.id);
+                if(prod) { prod.stock -= item.qty; }
+            });
+
+            let subtotal = cart.reduce((sum, i) => sum + (i.price * i.qty), 0);
+            let totalShipping = 0;
+            const uniqueMerchantIds = [...new Set(cart.map(item => item.merchantId))];
+            uniqueMerchantIds.forEach(mId => {
+                const merchant = dbData.merchants.find(m => m.id === mId);
+                if(merchant && merchant.shippingRates && merchant.shippingRates[gov]) {
+                    totalShipping += parseFloat(merchant.shippingRates[gov]) || 0;
+                }
+            });
+            const grandTotal = subtotal + totalShipping;
+
+            const deliveryDate = new Date();
+            deliveryDate.setDate(deliveryDate.getDate() + 3);
+            const formattedDeliveryDate = deliveryDate.toLocaleDateString('ar-EG');
+
+            const newOrder = {
+                id: 'ord_' + Date.now(),
+                refNumber: refNumber,
+                customer: { name, phone, gov, city, area, street, detail },
+                items: [...cart],
+                totalAmount: grandTotal,
+                deliveryDate: formattedDeliveryDate,
+                status: 'pending_delivery',
+                date: new Date().toLocaleDateString('ar-EG')
+            };
+
+            dbData.orders.push(newOrder);
+
+            cart.forEach(item => {
+                const merchant = dbData.merchants.find(m => m.id === item.merchantId);
+                if(merchant) {
+                    const itemTotal = item.price * item.qty;
+                    let platformComm = 0;
+                    if(dbData.settings.commType === 'fixed') {
+                        platformComm = Math.min(itemTotal, dbData.settings.commValue || 0);
+                    } else {
+                        platformComm = itemTotal * ((dbData.settings.commValue || 10) / 100);
+                    }
+                    const merchantNet = itemTotal - platformComm;
+                    merchant.escrow += merchantNet;
+                }
+            });
+
+            saveDB();
+            closeCartModal();
+
+            let itemsText = cart.map(i => `- ${i.name} (${i.qty} قطعة): ${i.price * i.qty} ج.م`).join('\n');
+            let waMessage = `مرحباً بك يا أ/ ${name} ??\nشكراً لتسوقك من منصة minko ???\n\n?? *تفاصيل طلبك (كود فوري: ${refNumber})*:\n${itemsText}\n\n?? *الإجمالي المدفوع*: ${grandTotal} ج.م (شامل الشحن)\n?? *عنوان التوصيل*: محافظة ${gov}، ${city}، ${street}\n?? *ميعاد التسليم المتوقع*: ${formattedDeliveryDate}\n\nنتمنى لك تجربة تسوق رائعة!`;
+
+            let cleanPhone = phone.replace(/\D/g, '');
+            if(cleanPhone.startsWith('0')) { cleanPhone = '2' + cleanPhone; }
+
+            const encodedMsg = encodeURIComponent(waMessage);
+            const waUrl = `https://wa.me/${cleanPhone}?text=${encodedMsg}`;
+
+            document.getElementById('wa-preview-box').innerText = waMessage;
+            document.getElementById('wa-send-btn').setAttribute('href', waUrl);
+            document.getElementById('whatsapp-modal').classList.remove('hidden');
+
+            cart = [];
+            document.getElementById('cart-count').innerText = 0;
+        }
+
+        function renderMerchantOrders() {
+            const list = document.getElementById('merchant-orders-list');
+            if(!currentMerchant) return;
+
+            const myOrders = dbData.orders.filter(ord => ord.items.some(i => i.merchantId === currentMerchant.id));
+
+            if(myOrders.length === 0) {
+                list.innerHTML = `<p class="text-sm text-gray-500 py-3">لا توجد طلبات واردة لمتجرك حتى الآن.</p>`;
+                return;
+            }
+
+            list.innerHTML = myOrders.map(ord => {
+                const myItems = ord.items.filter(i => i.merchantId === currentMerchant.id);
+                
+                let itemsText = myItems.map(i => `- ${i.name} (${i.qty} قطعة): ${i.price * i.qty} ج.م`).join('\n');
+                let waMessage = `مرحباً أ/ ${ord.customer.name} ??\nتواصل معك متجر (${currentMerchant.storeName}) بخصوص طلبك (كود فوري: ${ord.refNumber}):\n\n${itemsText}\n\n?? الإجمالي: ${ord.totalAmount} ج.م\n?? ميعاد التسليم المتوقع: ${ord.deliveryDate || 'قريباً'}\n\nشكراً لثقتكم بنا!`;
+                let cleanPhone = ord.customer.phone.replace(/\D/g, '');
+                if(cleanPhone.startsWith('0')) { cleanPhone = '2' + cleanPhone; }
+                const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(waMessage)}`;
+
+                return `
+                    <div class="bg-gray-50 border rounded-xl p-4 space-y-3 text-sm">
+                        <div class="flex justify-between items-center border-b pb-2 flex-wrap gap-2">
+                            <div>
+                                <span class="font-bold text-xs bg-slate-900 text-white px-2.5 py-1 rounded">كود فوري: ${ord.refNumber}</span>
+                                <span class="text-xs text-gray-500 mr-2">${ord.date}</span>
+                            </div>
+                            <div>
+                                <span class="text-xs px-2.5 py-1 rounded font-bold ${ord.status === 'completed' ? 'bg-emerald-100 text-emerald-800' : (ord.status === 'cancelled' ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800')}">
+                                    ${ord.status === 'completed' ? 'تم تسليم المندوب وتحويل الرصيد' : (ord.status === 'cancelled' ? 'ملغي ومسترجع للمخزن' : 'جاري التوصيل مع المندوب')}
+                                </span>
+                            </div>
+                        </div>
+                        <p><strong>العميل:</strong> ${ord.customer.name} (${ord.customer.phone})</p>
+                        <p><strong>العنوان المفصل:</strong> محافظة ${ord.customer.gov}، مدينة ${ord.customer.city}، منطقة ${ord.customer.area}، شارع ${ord.customer.street} - ${ord.customer.detail}</p>
+                        <p><strong>ميعاد التسليم المتوقع:</strong> <span class="text-amber-600 font-bold">${ord.deliveryDate || 'حدد لاحقاً'}</span></p>
+                        <div class="border-t pt-2">
+                            <p class="text-xs font-bold text-gray-600">المنتجات المطلوبة:</p>
+                            ${myItems.map(i => `<div class="text-xs text-gray-700">- ${i.name} (${i.qty} قطعة) بسعر ${i.price * i.qty} ج.م</div>`).join('')}
+                        </div>
+
+                        <div class="border-t pt-3 flex justify-between items-center flex-wrap gap-2">
+                            <a href="${waUrl}" target="_blank" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1">
+                                <i class="fa-brands fa-whatsapp text-sm"></i> مراسلة العميل واتساب بالفاتورة
+                            </a>
+                            
+                            ${ord.status === 'pending_delivery' ? `
+                                <div class="flex gap-2">
+                                    <button onclick="cancelOrderByMerchant('${ord.id}')" class="bg-red-50 text-red-600 px-3 py-1.5 rounded-lg text-xs font-bold">إلغاء الطلب</button>
+                                    <button onclick="confirmCourierDelivery('${ord.id}')" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold">تأكيد تسليم المندوب</button>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function cancelOrderByMerchant(orderId) {
+            const ord = dbData.orders.find(o => o.id === orderId);
+            if(!ord || ord.status !== 'pending_delivery') return;
+
+            if(confirm('هل تريد إلغاء الطلب وإرجاع المنتجات إلى مخزنك؟')) {
+                ord.status = 'cancelled';
+                ord.items.forEach(item => {
+                    const prod = dbData.products.find(p => p.id === item.id);
+                    if(prod) { prod.stock += item.qty; }
+                    const merchant = dbData.merchants.find(m => m.id === item.merchantId);
+                    if(merchant) {
+                        const itemTotal = item.price * item.qty;
+                        let platformComm = dbData.settings.commType === 'fixed' ? Math.min(itemTotal, dbData.settings.commValue || 0) : itemTotal * ((dbData.settings.commValue || 10) / 100);
+                        const merchantNet = itemTotal - platformComm;
+                        merchant.escrow = Math.max(0, merchant.escrow - merchantNet);
+                    }
+                });
+                saveDB();
+                showMerchantDashboard();
+                alert('تم الإلغاء واسترجاع المخزن بنجاح!');
+            }
+        }
+
+        function confirmCourierDelivery(orderId) {
+            const ord = dbData.orders.find(o => o.id === orderId);
+            if(!ord || ord.status !== 'pending_delivery') return;
+
+            if(confirm('تأكيد أن المندوب قام بتسليم الشحنة للعميل بنجاح؟')) {
+                ord.status = 'completed';
+                ord.items.forEach(item => {
+                    const merchant = dbData.merchants.find(m => m.id === item.merchantId);
+                    if(merchant) {
+                        const itemTotal = item.price * item.qty;
+                        let platformComm = dbData.settings.commType === 'fixed' ? Math.min(itemTotal, dbData.settings.commValue || 0) : itemTotal * ((dbData.settings.commValue || 10) / 100);
+                        const merchantNet = itemTotal - platformComm;
+                        merchant.escrow = Math.max(0, merchant.escrow - merchantNet);
+                        merchant.balance += merchantNet;
+                    }
+                });
+                saveDB();
+                showMerchantDashboard();
+                alert('تم تأكيد التوصيل وتحويل الأرباح لرصيد التاجر المتاح للسحب!');
+            }
+        }
+
+        function handleMerchantLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const pass = document.getElementById('login-password').value;
+            const merchant = dbData.merchants.find(m => m.email === email && m.password === pass);
+
+            if(merchant) {
+                if(merchant.status !== 'active') { alert('الحساب موقوف.'); return; }
+                currentMerchant = merchant;
+                showMerchantDashboard();
+            } else { alert('خطأ في البيانات.'); }
+        }
+
+        function showMerchantDashboard() {
+            document.getElementById('merchant-login-container').classList.add('hidden');
+            document.getElementById('merchant-dashboard-container').classList.remove('hidden');
+            document.getElementById('merchant-welcome-title').innerText = `متجر: ${currentMerchant.storeName}`;
+            document.getElementById('merchant-store-subtitle').innerText = `المالك: ${currentMerchant.owner} | البريد: ${currentMerchant.email}`;
+            
+            document.getElementById('merchant-stat-sales').innerText = currentMerchant.balance + ' ج.م';
+            document.getElementById('merchant-stat-escrow').innerText = currentMerchant.escrow + ' ج.م';
+            document.getElementById('merchant-stat-balance').innerText = currentMerchant.balance + ' ج.م';
+
+            const funderBadge = document.getElementById('merchant-funder-badge');
+            const selfFunderSel = document.getElementById('merchant-self-funder-select');
+            const mFundings = (dbData.fundings || []).filter((f) => f.merchantId === currentMerchant.id);
+            const hasFunding = mFundings.length > 0 || currentMerchant.isFunded === true;
+            if (selfFunderSel) {
+                selfFunderSel.value = hasFunding ? 'funded' : 'unfunded';
+            }
+            if (mFundings.length > 0) {
+                const totalFunded = mFundings.reduce((s, f) => s + (parseFloat(f.amount) || 0), 0);
+                const names = [...new Set(mFundings.map((f) => f.funderName))].join(' ، ');
+                funderBadge.innerText = `ممَوَّل بواسطة: ${names} — إجمالي التمويل: ${totalFunded} ج.م`;
+                funderBadge.classList.remove('hidden');
+            } else if (currentMerchant.isFunded) {
+                funderBadge.innerText = 'حالة المتجر: تاجر مموَّل';
+                funderBadge.classList.remove('hidden');
+            } else {
+                funderBadge.classList.add('hidden');
+            }
+
+            renderMerchantShippingInputs();
+            renderMerchantProducts();
+            renderMerchantOrders();
+        }
+
+        function renderMerchantShippingInputs() {
+            const container = document.getElementById('merchant-shipping-inputs');
+            if(!currentMerchant.shippingRates) currentMerchant.shippingRates = {};
+            const rates = currentMerchant.shippingRates;
+            const setList = allEgyptGovernorates.filter(g => rates[g] !== undefined && rates[g] !== '');
+            container.className = 'space-y-3';
+            container.innerHTML = `
+                <div class="flex flex-wrap items-end gap-2">
+                    <div class="flex-1 min-w-[150px]">
+                        <label class="block text-xs font-bold text-gray-700 mb-1">المحافظة:</label>
+                        <select id="ship-gov-select" onchange="onShipGovChange()" class="w-full border rounded-lg p-2.5 text-sm bg-white">
+                            <option value="">-- اختر المحافظة --</option>
+                            <option value="__all__">كل المحافظات (نفس السعر)</option>
+                            ${allEgyptGovernorates.map(g => `<option value="${g}">${g}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="w-28">
+                        <label class="block text-xs font-bold text-gray-700 mb-1">السعر (ج.م):</label>
+                        <input type="number" min="0" id="ship-price-input" placeholder="0" class="w-full border rounded-lg p-2.5 text-sm">
+                    </div>
+                    <button type="button" onclick="addShippingRate()" class="bg-slate-900 hover:bg-slate-800 text-white font-bold px-4 py-2.5 rounded-lg text-sm whitespace-nowrap">حفظ السعر</button>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    ${setList.length ? setList.map(g => `<span class="inline-flex items-center gap-2 bg-gray-100 border rounded-full px-3 py-1 text-xs font-bold">${g}: ${parseFloat(rates[g]) === 0 ? 'مجاني' : fmtMoney(rates[g]) + ' ج.م'}<button type="button" onclick="removeShippingRate('${g}')" class="text-red-500">✕</button></span>`).join('') : '<p class="text-xs text-gray-500">لسه ماحددتش أسعار شحن.</p>'}
+                </div>`;
+        }
+
+        function onShipGovChange() {
+            const gov = document.getElementById('ship-gov-select').value;
+            const rates = currentMerchant.shippingRates || {};
+            const input = document.getElementById('ship-price-input');
+            input.value = (gov && gov !== '__all__' && rates[gov] !== undefined) ? rates[gov] : '';
+        }
+
+        function addShippingRate() {
+            if(!currentMerchant) return;
+            if(!currentMerchant.shippingRates) currentMerchant.shippingRates = {};
+            const gov = document.getElementById('ship-gov-select').value;
+            const raw = document.getElementById('ship-price-input').value;
+            const price = parseFloat(raw);
+            if(!gov) { alert('اختار المحافظة الأول.'); return; }
+            if(raw === '' || isNaN(price) || price < 0) { alert('اكتب سعر الشحن (0 يعني شحن مجاني).'); return; }
+            if(gov === '__all__') { allEgyptGovernorates.forEach(g => { currentMerchant.shippingRates[g] = price; }); }
+            else { currentMerchant.shippingRates[gov] = price; }
+            saveDB();
+            renderMerchantShippingInputs();
+            alert('تم حفظ سعر الشحن.');
+        }
+
+        function removeShippingRate(gov) {
+            if(!currentMerchant || !currentMerchant.shippingRates) return;
+            delete currentMerchant.shippingRates[gov];
+            saveDB();
+            renderMerchantShippingInputs();
+        }
+
+        function handleMerchantToggleFunding() {
+            if (!currentMerchant) return;
+            const choice = document.getElementById('merchant-self-funder-select').value;
+            if (choice === 'funded') {
+                const fName = prompt('أدخل اسم الممول / الجهة الممولة:');
+                if (!fName || !fName.trim()) {
+                    showMerchantDashboard();
+                    return;
+                }
+                const fAmt = parseFloat(prompt('أدخل مبلغ التمويل (ج.م):') || '0');
+                const fShare = parseFloat(prompt('أدخل نسبة ربح الممول (%):') || '0');
+                if (isNaN(fAmt) || fAmt <= 0) {
+                    alert('مبلغ التمويل غير صحيح.');
+                    showMerchantDashboard();
+                    return;
+                }
+                currentMerchant.isFunded = true;
+                currentMerchant.balance = (parseFloat(currentMerchant.balance) || 0) + fAmt;
+                if (!Array.isArray(dbData.fundings)) dbData.fundings = [];
+                dbData.fundings.push({
+                    id: 'fnd_' + Date.now(),
+                    funderName: fName.trim(),
+                    merchantId: currentMerchant.id,
+                    merchantStoreName: currentMerchant.storeName,
+                    amount: fAmt,
+                    profitSharePercent: isNaN(fShare) ? 0 : fShare,
+                    date: new Date().toLocaleDateString('ar-EG')
+                });
+                saveDB();
+                showMerchantDashboard();
+                alert('تم تفعيل حالة التمويل وإضافة مبلغ التمويل لرصيدك بنجاح!');
+            } else {
+                if (confirm('هل تريد تحويل حالة متجرك إلى تاجر غير مموَّل؟')) {
+                    currentMerchant.isFunded = false;
+                    dbData.fundings = (dbData.fundings || []).filter((f) => f.merchantId !== currentMerchant.id);
+                    saveDB();
+                    showMerchantDashboard();
+                } else {
+                    showMerchantDashboard();
+                }
+            }
+        }
+
+        function handleMerchantLogout() {
+            currentMerchant = null;
+            document.getElementById('merchant-dashboard-container').classList.add('hidden');
+            document.getElementById('merchant-login-container').classList.remove('hidden');
+        }
+
+        function toggleRegFunderFields() {
+            const st = document.getElementById('reg-funded-status').value;
+            const box = document.getElementById('reg-funder-extra');
+            if (st === 'funded') {
+                box.classList.remove('hidden');
+            } else {
+                box.classList.add('hidden');
+            }
+        }
+
+        function openRegisterModal() {
+            document.getElementById('reg-funded-status').value = 'unfunded';
+            toggleRegFunderFields();
+            document.getElementById('register-modal').classList.remove('hidden');
+        }
+        function closeRegisterModal() { document.getElementById('register-modal').classList.add('hidden'); }
+
+        function handleSaveMerchant(e) {
+            e.preventDefault();
+            const isFunded = document.getElementById('reg-funded-status').value === 'funded';
+            const funderName = (document.getElementById('reg-funder-name').value || '').trim();
+            const funderAmount = parseFloat(document.getElementById('reg-funder-amount').value) || 0;
+            const funderShare = parseFloat(document.getElementById('reg-funder-share').value) || 0;
+
+            if (isFunded && (!funderName || funderAmount <= 0)) {
+                alert('يرجى إدخال اسم الممول ومبلغ التمويل.');
+                return;
+            }
+
+            const newMerchantId = 'm_' + Date.now();
+            const storeName = document.getElementById('reg-store-name').value;
+            dbData.merchants.push({
+                id: newMerchantId,
+                storeName: storeName,
+                owner: document.getElementById('reg-owner-name').value,
+                email: document.getElementById('reg-email').value,
+                password: document.getElementById('reg-password').value,
+                isFunded: isFunded,
+                shippingRates: {},
+                status: 'active',
+                balance: isFunded ? funderAmount : 0,
+                escrow: 0
+            });
+
+            if (isFunded) {
+                if (!Array.isArray(dbData.fundings)) dbData.fundings = [];
+                dbData.fundings.push({
+                    id: 'fnd_' + (Date.now() + 1),
+                    funderName: funderName,
+                    merchantId: newMerchantId,
+                    merchantStoreName: storeName,
+                    amount: funderAmount,
+                    profitSharePercent: funderShare,
+                    date: new Date().toLocaleDateString('ar-EG')
+                });
+            }
+
+            saveDB();
+            e.target.reset();
+            toggleRegFunderFields();
+            closeRegisterModal();
+            alert('تم التسجيل بنجاح!');
+        }
+
+        const CLOUDINARY_CLOUD_NAME = 'dytbyf8na';
+        const CLOUDINARY_UPLOAD_PRESET = 'minko_unsigned';
+
+        // يصغّر الصورة (حد أقصى 800 بكسل) ثم يرفعها على Cloudinary ويرجع الرابط
+        function uploadImageToCloudinary(file) {
+            return new Promise((resolve, reject) => {
+                function send(blob) {
+                    const fd = new FormData();
+                    fd.append('file', blob);
+                    fd.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+                    fd.append('folder', 'products');
+                    fetch('https://api.cloudinary.com/v1_1/' + CLOUDINARY_CLOUD_NAME + '/image/upload', { method: 'POST', body: fd })
+                        .then(r => r.json())
+                        .then(data => data.secure_url ? resolve(data.secure_url) : reject(new Error((data.error && data.error.message) || 'upload failed')))
+                        .catch(reject);
+                }
+                try {
+                    const img = new Image();
+                    const objUrl = URL.createObjectURL(file);
+                    img.onload = function() {
+                        const max = 800;
+                        const scale = Math.min(1, max / Math.max(img.width, img.height));
+                        const canvas = document.createElement('canvas');
+                        canvas.width = Math.round(img.width * scale);
+                        canvas.height = Math.round(img.height * scale);
+                        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                        URL.revokeObjectURL(objUrl);
+                        canvas.toBlob(function(blob) { send(blob || file); }, 'image/jpeg', 0.8);
+                    };
+                    img.onerror = function() { URL.revokeObjectURL(objUrl); send(file); };
+                    img.src = objUrl;
+                } catch (err) { send(file); }
+            });
+        }
+
+        function handleAddProduct(e) {
+            e.preventDefault();
+            const fileInput = document.getElementById('new-prod-imagefile');
+            if (fileInput.files && fileInput.files[0]) {
+                uploadImageToCloudinary(fileInput.files[0])
+                    .then(url => saveNewProductData(url))
+                    .catch(err => { console.warn(err); alert('فشل رفع الصورة. تأكد من الإنترنت وحاول تاني.'); });
+            } else { saveNewProductData(''); }
+        }
+
+        function saveNewProductData(imageUrl) {
+            dbData.products.push({
+                id: 'p_' + Date.now(),
+                merchantId: currentMerchant.id,
+                name: document.getElementById('new-prod-name').value,
+                ...applyDiscount(document.getElementById('new-prod-price').value, document.getElementById('new-prod-discount').value),
+                category: document.getElementById('new-prod-category').value.trim(),
+                stock: parseInt(document.getElementById('new-prod-stock').value),
+                image: imageUrl,
+                desc: document.getElementById('new-prod-desc').value
+            });
+            saveDB();
+            document.getElementById('add-product-form').reset();
+            renderMerchantProducts();
+            alert('تم إضافة المنتج للمخزن بنجاح!');
+        }
+
+        function renderMerchantProducts() {
+            const list = document.getElementById('merchant-products-list');
+            const myProds = dbData.products.filter(p => p.merchantId === currentMerchant.id);
+            if(myProds.length === 0) { list.innerHTML = `<p class="text-sm text-gray-500 py-4">لا توجد منتجات.</p>`; return; }
+            list.innerHTML = `
+                <table class="w-full min-w-[560px] text-right text-sm">
+                    <thead><tr class="border-b bg-gray-50"><th class="p-3">المنتج</th><th class="p-3">السعر</th><th class="p-3">المخزن المتاح</th><th class="p-3">إجراء</th></tr></thead>
+                    <tbody>
+                        ${myProds.map(p => `
+                            <tr class="border-b">
+                                <td class="p-3"><div class="flex items-center gap-2"><img src="${p.image || 'https://placehold.co/50'}" class="w-8 h-8 rounded object-cover">${p.name}</div></td>
+                                <td class="p-3 text-amber-600 font-bold whitespace-nowrap">${fmtMoney(p.price)} ج.م</td>
+                                <td class="p-3 font-bold ${p.stock > 0 ? 'text-emerald-600' : 'text-red-500'}">${p.stock} قطعة</td>
+                                <td class="p-3"><div class="flex gap-2 whitespace-nowrap">
+                                    <button onclick="openEditProductModal('${p.id}')" class="bg-blue-50 text-blue-600 px-3 py-1 rounded text-xs font-bold">تعديل المخزون</button>
+                                    <button onclick="deleteProduct('${p.id}')" class="bg-red-50 text-red-600 px-3 py-1 rounded text-xs">حذف</button>
+                                </div></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function openEditProductModal(prodId) {
+            const p = dbData.products.find(item => item.id === prodId);
+            if(!p) return;
+            document.getElementById('edit-prod-id').value = p.id;
+            document.getElementById('edit-prod-name').value = p.name;
+            document.getElementById('edit-prod-price').value = (p.originalPrice || p.price);
+            document.getElementById('edit-prod-discount').value = p.discount || '';
+            document.getElementById('edit-prod-stock').value = p.stock;
+            document.getElementById('edit-prod-category').value = p.category;
+            document.getElementById('edit-prod-desc').value = p.desc || '';
+            document.getElementById('edit-product-modal').classList.remove('hidden');
+        }
+
+        function closeEditProductModal() { document.getElementById('edit-product-modal').classList.add('hidden'); }
+
+        function handleUpdateProduct(e) {
+            e.preventDefault();
+            const id = document.getElementById('edit-prod-id').value;
+            const fileInput = document.getElementById('edit-prod-imagefile');
+
+            if (fileInput.files && fileInput.files[0]) {
+                uploadImageToCloudinary(fileInput.files[0])
+                    .then(url => updateProductData(id, url))
+                    .catch(err => { console.warn(err); alert('فشل رفع الصورة. تأكد من الإنترنت وحاول تاني.'); });
+            } else { updateProductData(id, null); }
+        }
+
+        function updateProductData(id, newImg) {
+            const p = dbData.products.find(item => item.id === id);
+            if(p) {
+                p.name = document.getElementById('edit-prod-name').value;
+                Object.assign(p, applyDiscount(document.getElementById('edit-prod-price').value, document.getElementById('edit-prod-discount').value));
+                p.stock = parseInt(document.getElementById('edit-prod-stock').value);
+                p.category = document.getElementById('edit-prod-category').value;
+                if(newImg) { p.image = newImg; }
+                p.desc = document.getElementById('edit-prod-desc').value;
+                saveDB();
+                closeEditProductModal();
+                renderMerchantProducts();
+                renderStorefront();
+                alert('تم تحديث المخزون والبيانات بنجاح!');
+            }
+        }
+
+        function deleteProduct(prodId) {
+            if(!confirm('هتحذف المنتج ده نهائياً. متأكد؟')) return;
+            dbData.products = dbData.products.filter(p => p.id !== prodId);
+            saveDB();
+            renderMerchantProducts();
+            renderStorefront();
+        }
+
+        function handleAdminLogin(e) {
+            e.preventDefault();
+            const passInput = document.getElementById('admin-pass-input').value;
+            const correctPass = dbData.settings.adminPassword || 'admin123';
+            if(passInput === correctPass) {
+                document.getElementById('admin-login-box').classList.add('hidden');
+                document.getElementById('admin-dashboard-box').classList.remove('hidden');
+                document.getElementById('comm-type').value = dbData.settings.commType || 'percent';
+                document.getElementById('platform-commission-value').value = dbData.settings.commValue || 10;
+                toggleCommType();
+                renderAdminDashboard();
+            } else { alert('كلمة المرور خطأ.'); }
+        }
+
+        function logoutAdmin() {
+            document.getElementById('admin-dashboard-box').classList.add('hidden');
+            document.getElementById('admin-login-box').classList.remove('hidden');
+            document.getElementById('admin-pass-input').value = '';
+        }
+
+        function renderAdminDashboard() {
+            document.getElementById('admin-total-merchants').innerText = dbData.merchants.length;
+            const totalEscrow = dbData.merchants.reduce((sum, m) => sum + m.escrow, 0);
+            document.getElementById('admin-total-escrow').innerText = totalEscrow + ' ج.م';
+
+            let totalComm = 0;
+            dbData.merchants.forEach(m => { 
+                if(dbData.settings.commType === 'fixed') {
+                    totalComm += (m.escrow > 0 ? (dbData.settings.commValue || 0) : 0);
+                } else {
+                    let rate = dbData.settings.commValue || 10;
+                    totalComm += (m.escrow * (rate / (100 - rate))); 
+                }
+            });
+            document.getElementById('admin-total-commission').innerText = totalComm.toFixed(2) + ' ج.م';
+
+            const table = document.getElementById('admin-merchants-table');
+            table.innerHTML = dbData.merchants.length === 0 ? '<p class="text-gray-500 py-4">لا يوجد تجار.</p>' : `
+                <table class="w-full min-w-[640px] text-right text-sm">
+                    <thead><tr class="border-b bg-gray-50"><th class="p-3">المتجر</th><th class="p-3">المالك</th><th class="p-3">أموال بالضمان (Escrow)</th><th class="p-3">رصيد متاح للسحب</th><th class="p-3">الإجراء</th></tr></thead>
+                    <tbody>
+                        ${dbData.merchants.map(m => `
+                            <tr class="border-b">
+                                <td class="p-3 font-bold">${m.storeName}</td>
+                                <td class="p-3">${m.owner}</td>
+                                <td class="p-3 text-amber-600 font-bold whitespace-nowrap">${fmtMoney(m.escrow)} ج.م</td>
+                                <td class="p-3 text-emerald-600 font-bold whitespace-nowrap">${fmtMoney(m.balance)} ج.م</td>
+                                <td class="p-3"><div class="flex gap-2 whitespace-nowrap">
+                                    <button onclick="openEditMerchantAdminModal('${m.id}')" class="bg-blue-50 text-blue-600 px-3 py-1 rounded text-xs font-bold">تعديل</button>
+                                    <button onclick="deleteMerchant('${m.id}')" class="bg-red-50 text-red-600 px-3 py-1 rounded text-xs">حذف</button>
+                                </div></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function openEditMerchantAdminModal(mId) {
+            const m = dbData.merchants.find(item => item.id === mId);
+            if(!m) return;
+            document.getElementById('admin-edit-m-id').value = m.id;
+            document.getElementById('admin-edit-store').value = m.storeName;
+            document.getElementById('admin-edit-owner').value = m.owner;
+            document.getElementById('admin-edit-email').value = m.email;
+            document.getElementById('edit-merchant-modal').classList.remove('hidden');
+        }
+
+        function closeEditMerchantModal() { document.getElementById('edit-merchant-modal').classList.add('hidden'); }
+
+        function handleUpdateMerchantAdmin(e) {
+            e.preventDefault();
+            const id = document.getElementById('admin-edit-m-id').value;
+            const m = dbData.merchants.find(item => item.id === id);
+            if(m) {
+                m.storeName = document.getElementById('admin-edit-store').value;
+                m.owner = document.getElementById('admin-edit-owner').value;
+                m.email = document.getElementById('admin-edit-email').value;
+                saveDB();
+                closeEditMerchantModal();
+                renderAdminDashboard();
+                renderStorefront();
+                alert('تم تحديث بيانات التاجر بنجاح!');
+            }
+        }
+
+        function deleteMerchant(mId) {
+            const _dm = dbData.merchants.find(x => x.id === mId);
+            if(confirm('هتحذف التاجر "' + (_dm ? _dm.storeName : '') + '" وكل منتجاته نهائياً. متأكد؟')) {
+                dbData.merchants = dbData.merchants.filter(m => m.id !== mId);
+                dbData.products = dbData.products.filter(p => p.merchantId !== mId);
+                dbData.fundings = (dbData.fundings || []).filter(f => f.merchantId !== mId);
+                saveDB();
+                renderAdminDashboard();
+                renderStorefront();
+            }
+        }
+
+        function populateFunderMerchantSelect() {
+            const sel = document.getElementById('funder-merchant-select');
+            if (!sel) return;
+            if (!dbData.merchants || dbData.merchants.length === 0) {
+                sel.innerHTML = '<option value="">لا يوجد تجار مسجلون بعد</option>';
+                return;
+            }
+            sel.innerHTML = '<option value="">-- اختر التاجر الممول --</option>' +
+                dbData.merchants.map((m) => `<option value="${m.id}">${m.storeName} (${m.owner})</option>`).join('');
+        }
+
+        function handleAddFunder(e) {
+            e.preventDefault();
+            const funderName = document.getElementById('funder-name').value.trim();
+            const merchantId = document.getElementById('funder-merchant-select').value;
+            const amount = parseFloat(document.getElementById('funder-amount').value);
+            const profitSharePercent = parseFloat(document.getElementById('funder-share').value);
+
+            if (!funderName || !merchantId || isNaN(amount) || amount <= 0 || isNaN(profitSharePercent) || profitSharePercent < 0) {
+                alert('يرجى إدخال بيانات الممول والتمويل بشكل صحيح.');
+                return;
+            }
+
+            const merchant = dbData.merchants.find((m) => m.id === merchantId);
+            if (!merchant) {
+                alert('التاجر المحدد غير موجود.');
+                return;
+            }
+
+            if (!Array.isArray(dbData.fundings)) dbData.fundings = [];
+            dbData.fundings.push({
+                id: 'fnd_' + Date.now(),
+                funderName,
+                merchantId,
+                merchantStoreName: merchant.storeName,
+                amount,
+                profitSharePercent,
+                date: new Date().toLocaleDateString('ar-EG')
+            });
+
+            merchant.balance = (parseFloat(merchant.balance) || 0) + amount;
+            saveDB();
+            e.target.reset();
+            populateFunderMerchantSelect();
+            renderAdminDashboard();
+            alert(`تم تسجيل تمويل بقيمة ${amount} ج.م للمتجر (${merchant.storeName}) بنجاح!`);
+        }
+
+        function deleteFunding(fndId) {
+            dbData.fundings = (dbData.fundings || []).filter((f) => f.id !== fndId);
+            saveDB();
+            renderAdminDashboard();
+        }
+
+        function renderFundersTable() {
+            populateFunderMerchantSelect();
+            const container = document.getElementById('admin-funders-table');
+            if (!container) return;
+            const fundings = dbData.fundings || [];
+            if (fundings.length === 0) {
+                container.innerHTML = '<p class="text-sm text-gray-500 py-3">لا توجد عقود تمويل مسجلة لبعض التجار حالياً.</p>';
+                return;
+            }
+            container.innerHTML = `
+                <table class="w-full text-right text-sm">
+                    <thead><tr class="border-b bg-gray-50"><th class="p-3">الممول</th><th class="p-3">التاجر الممول</th><th class="p-3">مبلغ التمويل</th><th class="p-3">نسبة ربح الممول</th><th class="p-3">التاريخ</th><th class="p-3">إجراء</th></tr></thead>
+                    <tbody>
+                        ${fundings.map((f) => {
+                            const m = dbData.merchants.find((item) => item.id === f.merchantId);
+                            return `
+                                <tr class="border-b">
+                                    <td class="p-3 font-bold">${f.funderName}</td>
+                                    <td class="p-3">${m ? m.storeName : f.merchantStoreName}</td>
+                                    <td class="p-3 text-emerald-600 font-bold">${f.amount} ج.م</td>
+                                    <td class="p-3 text-amber-600 font-bold">${f.profitSharePercent}%</td>
+                                    <td class="p-3 text-gray-500">${f.date}</td>
+                                    <td class="p-3"><button onclick="deleteFunding('${f.id}')" class="bg-red-50 text-red-600 px-3 py-1 rounded text-xs">حذف</button></td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        const _origRenderAdminDashboard = renderAdminDashboard;
+        renderAdminDashboard = function() {
+            _origRenderAdminDashboard();
+            renderFundersTable();
+        };
+
+        window.onload = function() {
+            renderStorefront();
+            syncFromFirebaseOnce();
+        };
+    </script>
+    <div id="fb-status" style="display:none;position:fixed;bottom:8px;left:8px;z-index:9999;background:#334155;color:#fff;font-size:12px;padding:6px 10px;border-radius:8px;direction:rtl;max-width:90vw;">جاري الاتصال بـ Firebase...</div>
+</body>
+</html>
